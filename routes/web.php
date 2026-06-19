@@ -10,7 +10,7 @@ use App\Http\Livewire\Quiz\QuizPlayerPage;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', LeaderboardPage::class)->name('leaderboard');
-Route::get('/leaderboard', LeaderboardPage::class)->name('leaderboard');
+Route::get('/leaderboard', LeaderboardPage::class);
 Route::get('/scoring', ScoringGuidePage::class)->name('scoring.guide');
 Route::get('/score-entry', function () {
     return redirect()->route('leaderboard', ['entry' => 1]);
