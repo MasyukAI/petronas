@@ -6,6 +6,7 @@ use App\Events\QuizPlayerJoined;
 use App\Models\Participant;
 use App\Models\QuizPlayer;
 use App\Models\QuizRound;
+use Illuminate\View\View;
 use Livewire\Component;
 
 class QuizJoinPage extends Component
@@ -24,7 +25,7 @@ class QuizJoinPage extends Component
 
     public function mount(string $code = ''): void
     {
-        if ($code) {
+        if ($code !== '' && $code !== '0') {
             $this->code = $code;
             $this->loadRound();
         }
@@ -33,12 +34,12 @@ class QuizJoinPage extends Component
     public function loadRound(): void
     {
         $this->round = QuizRound::where('code', strtoupper($this->code))
-            ->where(function ($q) {
+            ->where(function ($q): void {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
             })
             ->first();
 
-        if (! $this->round) {
+        if (! $this->round instanceof QuizRound) {
             $this->statusMessage = 'Invalid or expired join code.';
         }
     }
@@ -52,7 +53,7 @@ class QuizJoinPage extends Component
         ]);
 
         $this->loadRound();
-        if (! $this->round) {
+        if (! $this->round instanceof QuizRound) {
             return;
         }
 
@@ -107,9 +108,9 @@ class QuizJoinPage extends Component
         $this->redirect(route('quiz.play', ['round' => $this->round->id]));
     }
 
-    public function render()
+    public function render(): View
     {
-        $players = $this->round ? $this->round->players()->get() : collect();
+        $players = $this->round instanceof QuizRound ? $this->round->players()->get() : collect();
 
         return view('livewire.quiz.join-page', [
             'players' => $players,

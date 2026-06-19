@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 class ScoreAttempt extends Model
 {
@@ -17,6 +18,7 @@ class ScoreAttempt extends Model
         'breakdown',
     ];
 
+    #[Override]
     protected function casts(): array
     {
         return [
@@ -24,6 +26,7 @@ class ScoreAttempt extends Model
         ];
     }
 
+    /** @return BelongsTo<Participant, $this> */
     public function participant(): BelongsTo
     {
         return $this->belongsTo(Participant::class);

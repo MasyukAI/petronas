@@ -1,5 +1,5 @@
 <div data-quiz-round-id="{{ $round?->id }}">
-    <section class="quiz-view">
+    <section class="quiz-view" wire:poll.10s="pollTick">
         <div class="quiz-shell">
             @if(!$round || !$player)
                 <section class="quiz-panel">
@@ -40,6 +40,7 @@
                             </article>
                         @endforeach
                     </div>
+                    <p style="margin-top:16px;text-align:center"><a href="{{ route('leaderboard') }}" class="ghost-button" style="display:inline-block">Leave Game</a></p>
                 </section>
             @elseif($currentQuestion)
                 <section class="quiz-play-panel">
@@ -103,6 +104,7 @@
                         @endif
                     </article>
                 </section>
+                <p style="margin-top:16px;text-align:center"><a href="{{ route('leaderboard') }}" class="ghost-button" style="display:inline-block">Leave Game</a></p>
             @endif
         </div>
     </section>

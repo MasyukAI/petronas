@@ -2,11 +2,14 @@
 
 namespace App\Http\Livewire\HazardHunt;
 
+use Illuminate\View\View;
 use Livewire\Component;
 
 class HazardStartPage extends Component
 {
     public string $scorecardId = '';
+
+    public string $name = '';
 
     public string $error = '';
 
@@ -14,8 +17,10 @@ class HazardStartPage extends Component
 
     public bool $showCountdown = false;
 
+    /** @var array<string, string> */
     protected $rules = [
         'scorecardId' => 'required|string|min:2|max:40',
+        'name' => 'required|string|max:100',
     ];
 
     public function confirmAndStart(): void
@@ -30,11 +35,14 @@ class HazardStartPage extends Component
 
     public function startGame(): void
     {
-        session(['hazard_scorecard_id' => $this->scorecardId]);
+        session([
+            'hazard_scorecard_id' => $this->scorecardId,
+            'hazard_player_name' => $this->name,
+        ]);
         $this->redirect(route('hazard.play'));
     }
 
-    public function render()
+    public function render(): View
     {
         return view('livewire.hazard-hunt.start-page')
             ->layout('components.layouts.app');

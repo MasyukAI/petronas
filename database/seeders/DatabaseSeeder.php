@@ -72,11 +72,9 @@ class DatabaseSeeder extends Seeder
             } elseif ($gameCode === 'quickfire_quiz') {
                 $calculated = $scoring->scoreQuickfire($score['correct']);
                 $result = ['score' => $calculated, 'rawResult' => "{$score['correct']}/10", 'breakdown' => []];
-            } elseif ($gameCode === 'pipe_fit_challenge') {
+            } else {
                 $calculated = $scoring->scorePipeFit($score['completed'], $score['seconds'] ?? null);
                 $result = ['score' => $calculated, 'rawResult' => 'pass + '.($score['seconds'] ?? '0').' sec', 'breakdown' => []];
-            } else {
-                continue;
             }
 
             ScoreAttempt::create([

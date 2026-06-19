@@ -8,14 +8,17 @@ use App\Models\Participant;
 use App\Models\ScoreAttempt;
 use App\Services\ScoringService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 use Livewire\Component;
 
 class HazardPlayPage extends Component
 {
+    /** @var array<int, array<string, mixed>> */
     public array $questions = [];
 
     public int $currentIndex = 0;
 
+    /** @var array<int, array<string, mixed>> */
     public ?array $answers = [];
 
     public int $score = 0;
@@ -26,9 +29,12 @@ class HazardPlayPage extends Component
 
     public bool $finished = false;
 
+    /** @var array<string, mixed>|null */
     public ?array $result = null;
 
     public string $scorecardId = '';
+
+    public string $playerName = '';
 
     public ?int $sessionId = null;
 
@@ -37,8 +43,9 @@ class HazardPlayPage extends Component
     public function mount(): void
     {
         $this->scorecardId = session('hazard_scorecard_id', '');
+        $this->playerName = session('hazard_player_name', $this->scorecardId);
 
-        if (! $this->scorecardId) {
+        if ($this->scorecardId === '' || $this->scorecardId === '0') {
             $this->redirect(route('hazard.start'));
 
             return;
@@ -46,7 +53,7 @@ class HazardPlayPage extends Component
 
         $questions = HazardQuestion::inRandomOrder()->take(5)->get();
         $this->questions = $questions->toArray();
-        if (empty($this->questions)) {
+        if ($this->questions === []) {
             $this->error = 'No questions available. Please contact the event administrator.';
         }
         $this->startedAt = now()->timestamp;
@@ -91,7 +98,7 @@ class HazardPlayPage extends Component
 
             $participant = Participant::firstOrCreate(
                 ['scorecard_id' => $this->scorecardId],
-                ['name' => $this->scorecardId]
+                ['name' => $this->playerName]
             );
 
             $session = HazardSession::create([
@@ -148,7 +155,7 @@ class HazardPlayPage extends Component
         $this->questions = $questions->toArray();
     }
 
-    public function render()
+    public function render(): View
     {
         return view('livewire.hazard-hunt.play-page', [
             'currentQuestion' => $this->questions[$this->currentIndex] ?? null,

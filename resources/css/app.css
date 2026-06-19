@@ -499,7 +499,7 @@ select {
 }
 
 .game-hub {
-  display: none;
+  display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 14px;
@@ -718,6 +718,9 @@ select {
   place-items: center;
   overflow: hidden;
   background: rgba(20, 35, 38, 0.42);
+}
+
+.leader-celebration .fireworks {
   pointer-events: none;
 }
 

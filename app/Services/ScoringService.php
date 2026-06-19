@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 class ScoringService
@@ -26,6 +28,7 @@ class ScoringService
         'minimumCorrectCompletionScore' => 10,
     ];
 
+    /** @return array{score: int, rawResult: string, breakdown: array{correct: int, maxCorrect: int, timeSeconds: ?int, quizPoints: float, timeBonus: float}} */
     public function scoreHazard(int $correct, ?int $seconds): array
     {
         $correct = max(0, min(self::HAZARD_RULES['maxCorrect'], $correct));

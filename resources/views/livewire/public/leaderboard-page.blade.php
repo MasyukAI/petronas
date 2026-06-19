@@ -134,6 +134,7 @@
                         <button class="primary-button" type="submit">Save Score</button>
                     </div>
                 </form>
+                <p style="margin-top:12px;text-align:center"><a href="{{ route('leaderboard') }}" class="ghost-button" style="display:inline-block">Back to Leaderboard</a></p>
             @endif
 
             <div class="leaderboard-panel">

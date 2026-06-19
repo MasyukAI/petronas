@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 class QuizPlayer extends Model
 {
@@ -22,6 +23,7 @@ class QuizPlayer extends Model
         'last_heartbeat',
     ];
 
+    #[Override]
     protected function casts(): array
     {
         return [
@@ -32,11 +34,13 @@ class QuizPlayer extends Model
         ];
     }
 
+    /** @return BelongsTo<QuizRound, $this> */
     public function round(): BelongsTo
     {
         return $this->belongsTo(QuizRound::class, 'quiz_round_id');
     }
 
+    /** @return BelongsTo<Participant, $this> */
     public function participant(): BelongsTo
     {
         return $this->belongsTo(Participant::class);

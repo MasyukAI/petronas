@@ -14,14 +14,18 @@
         "livewire/livewire": "^4.3"
     },
     "require-dev": {
+        "driftingly/rector-laravel": "^2.5",
         "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^3.10",
         "laravel/boost": "^2.4",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
         "laravel/pint": "^1.27",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
-        "phpunit/phpunit": "^12.5.12"
+        "phpstan/phpstan": "^2.2",
+        "phpunit/phpunit": "^12.5.12",
+        "rector/rector": "^2.4"
     },
     "autoload": {
         "psr-4": {

@@ -19,13 +19,13 @@ function initEcho() {
         broadcaster: 'reverb',
         key: import.meta.env.VITE_REVERB_APP_KEY,
         wsHost: import.meta.env.VITE_REVERB_HOST,
-        wsPort: import.meta.env.VITE_REVERB_PORT ?? 8080,
-        wssPort: import.meta.env.VITE_REVERB_PORT ?? 8080,
+        wsPort: import.meta.env.VITE_REVERB_WS_PORT ?? 8080,
+        wssPort: import.meta.env.VITE_REVERB_WSS_PORT ?? 443,
         forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
         enabledTransports: ['ws', 'wss'],
     });
 
-    echo.connector.pusher.connection.bind('error', (err) => {
+    echo.connector.pusher.connection.bind('error', () => {
         console.warn('Reverb unavailable, quiz updates will not be real-time.');
     });
 
@@ -38,7 +38,11 @@ function listenToRound(roundId, echo) {
 
     const channel = echo.channel(`quiz-round.${roundId}`);
 
-    const trigger = () => window.Livewire.dispatch('quiz-poll');
+    const trigger = () => {
+        if (window.Livewire && typeof window.Livewire.dispatch === 'function') {
+            window.Livewire.dispatch('quiz-poll');
+        }
+    };
 
     channel.listen('.quiz.round.started', trigger);
     channel.listen('.quiz.player.joined', trigger);
@@ -46,19 +50,35 @@ function listenToRound(roundId, echo) {
     channel.listen('.quiz.phase.changed', trigger);
     channel.listen('.quiz.player.next-ready', trigger);
     channel.listen('.quiz.round.reset', trigger);
+
+    return channel;
+}
+
+function subscribeToRound(channel, roundId) {
+    if (window.__echoChannel) {
+        window.Echo.leave(`quiz-round.${window.__echoChannel}`);
+    }
+    window.__echoChannel = roundId;
+    const echo = initEcho();
+    listenToRound(roundId, echo);
 }
 
 const roundId = getRoundId();
 
 if (roundId) {
-    const echo = initEcho();
-    listenToRound(roundId, echo);
+    subscribeToRound(null, roundId);
 }
 
 document.addEventListener('livewire:init', () => {
     const id = getRoundId();
-    if (id && id !== roundId) {
-        const echo = initEcho();
-        listenToRound(id, echo);
+    if (id && id !== (window.__echoChannel || roundId)) {
+        subscribeToRound(window.__echoChannel, id);
+    }
+});
+
+document.addEventListener('livewire:navigated', () => {
+    const id = getRoundId();
+    if (id && id !== (window.__echoChannel || roundId)) {
+        subscribeToRound(window.__echoChannel, id);
     }
 });

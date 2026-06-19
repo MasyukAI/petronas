@@ -33,7 +33,7 @@
 
             <div class="hazard-quiz-layout">
                 <div class="image-stage">
-                    <img class="scene-photo" src="{{ $currentQuestion['image'] }}" alt="{{ $currentQuestion['title'] }}" draggable="false">
+                    <img class="scene-photo" src="{{ $currentQuestion['image'] ?? '' }}" alt="{{ $currentQuestion['title'] }}" draggable="false" onerror="this.style.display='none'">
                 </div>
 
                 <aside class="found-panel quiz-panel-card">

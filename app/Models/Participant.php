@@ -14,11 +14,13 @@ class Participant extends Model
         'email',
     ];
 
+    /** @return HasMany<ScoreAttempt, $this> */
     public function scoreAttempts(): HasMany
     {
         return $this->hasMany(ScoreAttempt::class);
     }
 
+    /** @return HasMany<HazardSession, $this> */
     public function hazardSessions(): HasMany
     {
         return $this->hasMany(HazardSession::class);

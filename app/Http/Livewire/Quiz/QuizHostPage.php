@@ -10,7 +10,12 @@ use App\Models\QuizPlayer;
 use App\Models\QuizRound;
 use App\Models\ScoreAttempt;
 use App\Services\ScoringService;
+use Carbon\Carbon;
 use Database\Seeders\QuizQuestionBankSeeder;
+use Exception;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -29,30 +34,46 @@ class QuizHostPage extends Component
 
     public function createRound(): void
     {
-        $code = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 6));
+        $attempts = 0;
+        $maxAttempts = 3;
 
-        $questions = QuizQuestionBankSeeder::getRandomQuestions(10);
+        while ($attempts < $maxAttempts) {
+            $attempts++;
+            $code = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 6));
 
-        $this->round = QuizRound::create([
-            'code' => $code,
-            'status' => 'waiting',
-            'phase_name' => 'lobby',
-            'current_question' => null,
-            'questions' => $questions,
-            'question_count' => count($questions),
-            'timings' => [
-                'countdownMs' => 3000,
-            ],
-            'expires_at' => now()->addHour(),
-        ]);
+            try {
+                $questions = QuizQuestionBankSeeder::getRandomQuestions(10);
 
-        $this->joinUrl = url('/quickfire/join/'.$code);
-        $this->statusMessage = 'Round created. Share the code: '.$code;
+                $this->round = QuizRound::create([
+                    'code' => $code,
+                    'status' => 'waiting',
+                    'phase_name' => 'lobby',
+                    'current_question' => null,
+                    'questions' => $questions,
+                    'question_count' => count($questions),
+                    'timings' => [
+                        'countdownMs' => 3000,
+                    ],
+                    'expires_at' => now()->addHour(),
+                ]);
+
+                $this->joinUrl = url('/quickfire/join/'.$code);
+                $this->statusMessage = 'Round created. Share the code: '.$code;
+
+                return;
+            } catch (Exception) {
+                if ($attempts >= $maxAttempts) {
+                    $this->statusMessage = 'Failed to create round. Please try again.';
+
+                    return;
+                }
+            }
+        }
     }
 
     public function startRound(): void
     {
-        if (! $this->round) {
+        if (! $this->round instanceof QuizRound) {
             return;
         }
 
@@ -69,7 +90,7 @@ class QuizHostPage extends Component
     #[On('quiz-poll')]
     public function pollTick(): void
     {
-        if (! $this->round) {
+        if (! $this->round instanceof QuizRound) {
             return;
         }
         $this->round->refresh();
@@ -105,7 +126,10 @@ class QuizHostPage extends Component
             return;
         }
 
-        $allAnswered = $activePlayers->every(fn ($p) => ($p->answered_count ?? 0) > ($this->round->current_question ?? -1)
+        $allAnswered = $activePlayers->every(function ($p): bool {
+            /** @var QuizPlayer $p */
+            return ($p->answered_count ?? 0) > ($this->round->current_question ?? -1);
+        }
         );
 
         if ($allAnswered) {
@@ -127,7 +151,10 @@ class QuizHostPage extends Component
             return;
         }
 
-        $allReady = $activePlayers->every(fn ($p) => $p->next_ready);
+        $allReady = $activePlayers->every(function ($p) {
+            /** @var QuizPlayer $p */
+            return $p->next_ready;
+        });
 
         if ($allReady) {
             $next = ($this->round->current_question ?? 0) + 1;
@@ -162,18 +189,27 @@ class QuizHostPage extends Component
         }
     }
 
-    private function activePlayers()
+    /** @return Collection<int, QuizPlayer> */
+    private function activePlayers(): Collection
     {
-        return $this->round->players->filter(fn ($p) => is_null($p->last_heartbeat) || $p->last_heartbeat->gt(now()->subSeconds(10))
-        );
+        return $this->round->players->filter(function ($p): bool {
+            /** @var QuizPlayer $p */
+            /** @var Carbon|null $heartbeat */
+            $heartbeat = $p->last_heartbeat;
+
+            return is_null($heartbeat) || $heartbeat->gt(now()->subSeconds(10));
+        });
     }
 
     public function advanceToNext(): void
     {
-        if (! $this->round) {
+        if (! $this->round instanceof QuizRound) {
             return;
         }
-        if (! in_array($this->round->phase_name, ['review', 'question'])) {
+
+        $this->round->refresh();
+
+        if ($this->round->phase_name !== 'review') {
             return;
         }
 
@@ -203,40 +239,56 @@ class QuizHostPage extends Component
 
     private function saveQuizResults(): void
     {
-        if (! $this->round) {
+        if (! $this->round instanceof QuizRound) {
             return;
         }
 
-        $scoringService = app(ScoringService::class);
+        try {
+            DB::transaction(function (): void {
+                $scoringService = app(ScoringService::class);
 
-        foreach ($this->round->players as $player) {
-            $correctCount = (int) $player->correct_count;
-            $result = $scoringService->scoreQuickfire($correctCount, $this->round->question_count);
+                foreach ($this->round->players as $player) {
+                    /** @var QuizPlayer $player */
+                    $correctCount = (int) $player->correct_count;
+                    $result = $scoringService->scoreQuickfire($correctCount, $this->round->question_count);
 
-            $participant = Participant::firstOrCreate(
-                ['scorecard_id' => $player->scorecard_id],
-                ['name' => $player->name]
-            );
+                    $participant = Participant::firstOrCreate(
+                        ['scorecard_id' => $player->scorecard_id],
+                        ['name' => $player->name]
+                    );
 
-            ScoreAttempt::create([
-                'participant_id' => $participant->id,
-                'game_code' => 'quickfire_quiz',
-                'raw_result' => "{$correctCount}/{$this->round->question_count}",
-                'calculated_score' => $result,
-                'source' => 'quickfire',
-                'status' => 'approved',
-                'breakdown' => [
-                    'correct' => $correctCount,
-                    'total' => $this->round->question_count,
-                    'player_answers' => $player->answers,
-                ],
-            ]);
+                    $exists = ScoreAttempt::where('participant_id', $participant->id)
+                        ->where('game_code', 'quickfire_quiz')
+                        ->where('raw_result', "{$correctCount}/{$this->round->question_count}")
+                        ->exists();
+
+                    if ($exists) {
+                        continue;
+                    }
+
+                    ScoreAttempt::create([
+                        'participant_id' => $participant->id,
+                        'game_code' => 'quickfire_quiz',
+                        'raw_result' => "{$correctCount}/{$this->round->question_count}",
+                        'calculated_score' => $result,
+                        'source' => 'quickfire',
+                        'status' => 'approved',
+                        'breakdown' => [
+                            'correct' => $correctCount,
+                            'total' => $this->round->question_count,
+                            'player_answers' => $player->answers,
+                        ],
+                    ]);
+                }
+            });
+        } catch (Exception) {
+            $this->statusMessage = 'Failed to save quiz results.';
         }
     }
 
     public function resetRound(): void
     {
-        if ($this->round) {
+        if ($this->round instanceof QuizRound) {
             $roundId = $this->round->id;
             $this->round->players()->delete();
             $this->round->delete();
@@ -247,15 +299,15 @@ class QuizHostPage extends Component
         $this->statusMessage = 'Round reset.';
     }
 
-    public function render()
+    public function render(): View
     {
-        $players = $this->round ? $this->round->players()->get() : collect();
+        $players = $this->round instanceof QuizRound ? $this->round->players()->get() : collect();
         $playerCount = $players->count();
 
         return view('livewire.quiz.host-page', [
             'players' => $players,
             'playerCount' => $playerCount,
-            'questions' => $this->round?->questions ?? [],
+            'questions' => $this->round->questions ?? [],
         ])->layout('components.layouts.app');
     }
 }

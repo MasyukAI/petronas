@@ -1,5 +1,5 @@
 <div data-quiz-round-id="{{ $round?->id }}">
-    <section class="quiz-view">
+    <section class="quiz-view" wire:poll.5s="pollTick">
         <div class="quiz-shell">
             <section class="quiz-hero">
                 <div>
@@ -18,7 +18,7 @@
             </section>
 
             @if($round)
-            <section class="quiz-panel">
+                <section class="quiz-panel">
                     <div class="quiz-panel-heading">
                         <div>
                             <p class="mode-label">Waiting Lobby</p>
@@ -113,6 +113,14 @@
                         @endif
                     </section>
                 @endif
+            @else
+                <section class="quiz-panel">
+                    <div class="quiz-panel-heading">
+                        <h3>Round Ended</h3>
+                    </div>
+                    <p class="quiz-muted">Start a new round for the next group of players.</p>
+                    <button wire:click="createRound" class="primary-button" type="button" style="margin-top:12px">Create New Round</button>
+                </section>
             @endif
         </div>
     </section>

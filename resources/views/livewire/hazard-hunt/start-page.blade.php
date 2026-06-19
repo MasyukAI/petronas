@@ -32,8 +32,13 @@
                     <label>
                         Scorecard ID
                         <input wire:model="scorecardId" type="text" autocomplete="off" required placeholder="Example: HSE-0142">
+                        @error('scorecardId') <p class="form-error">{{ $message }}</p> @enderror
                     </label>
-                    @error('scorecardId') <p class="form-error">{{ $message }}</p> @enderror
+                    <label>
+                        Name
+                        <input wire:model="name" type="text" autocomplete="off" required placeholder="Your full name">
+                        @error('name') <p class="form-error">{{ $message }}</p> @enderror
+                    </label>
                     <button class="primary-button" type="submit">Confirm & Start</button>
                 </form>
             @endif

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
@@ -8,6 +10,7 @@ class QuizQuestionBankSeeder extends Seeder
 {
     public function run(): void {}
 
+    /** @return array<int, array{id: string, category: string, question: string, options: list<string>, answerIndex: int, correctAnswer: string}> */
     public static function getQuestions(): array
     {
         return [
@@ -416,6 +419,7 @@ class QuizQuestionBankSeeder extends Seeder
         ];
     }
 
+    /** @return array<int, array{id: string, category: string, question: string, options: list<string>, answerIndex: int, correctAnswer: string}> */
     public static function getRandomQuestions(int $count = 10): array
     {
         $questions = static::getQuestions();

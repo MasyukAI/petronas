@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Override;
 
 class QuizRound extends Model
 {
@@ -18,6 +19,7 @@ class QuizRound extends Model
         'expires_at',
     ];
 
+    #[Override]
     protected function casts(): array
     {
         return [
@@ -27,6 +29,7 @@ class QuizRound extends Model
         ];
     }
 
+    /** @return HasMany<QuizPlayer, $this> */
     public function players(): HasMany
     {
         return $this->hasMany(QuizPlayer::class);

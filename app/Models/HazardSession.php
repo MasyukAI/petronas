@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 class HazardSession extends Model
 {
@@ -20,6 +21,7 @@ class HazardSession extends Model
         'completed_at',
     ];
 
+    #[Override]
     protected function casts(): array
     {
         return [
@@ -30,6 +32,7 @@ class HazardSession extends Model
         ];
     }
 
+    /** @return BelongsTo<Participant, $this> */
     public function participant(): BelongsTo
     {
         return $this->belongsTo(Participant::class);

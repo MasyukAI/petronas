@@ -5,6 +5,7 @@ namespace App\Http\Livewire\Public;
 use App\Models\Participant;
 use App\Models\ScoreAttempt;
 use App\Services\ScoringService;
+use Illuminate\View\View;
 use Livewire\Component;
 
 class ManualScoreEntry extends Component
@@ -37,6 +38,7 @@ class ManualScoreEntry extends Component
 
     public string $pipeTime2 = '';
 
+    /** @var array<int, int|null> */
     public array $previewScores = [null, null, null, null];
 
     public int $totalPreview = 0;
@@ -55,6 +57,7 @@ class ManualScoreEntry extends Component
 
     public string $celebrationScore = '';
 
+    /** @return array<string, string> */
     protected function rules(): array
     {
         return [
@@ -64,12 +67,13 @@ class ManualScoreEntry extends Component
         ];
     }
 
+    /** @var array<string, string> */
     protected $messages = [
         'email.required' => 'Participant email is required so winners can be contacted.',
         'email.email' => 'Enter a valid email address.',
     ];
 
-    public function updated($field): void
+    public function updated(string $field): void
     {
         $this->calculatePreview();
     }
@@ -80,22 +84,22 @@ class ManualScoreEntry extends Component
 
         $scores = [];
 
-        $hazardCorrect = $this->parseFraction($this->hazardMark ?: $this->hazardMark2, 5);
+        $hazardCorrect = $this->parseFraction($this->hazardMark ?: $this->hazardMark2);
         $hazardSeconds = $this->parseSeconds($this->hazardTime ?: $this->hazardTime2);
         $scores[] = $hazardCorrect !== null ? $scoring->scoreHazard($hazardCorrect, $hazardSeconds)['score'] : null;
 
-        $reaction = $this->parseFraction($this->reactionMark ?: $this->reactionMark2, 10);
+        $reaction = $this->parseFraction($this->reactionMark ?: $this->reactionMark2);
         $scores[] = $reaction !== null ? $scoring->scoreReactionRisk($reaction) : null;
 
-        $quick = $this->parseFraction($this->quickfireMark ?: $this->quickfireMark2, 10);
+        $quick = $this->parseFraction($this->quickfireMark ?: $this->quickfireMark2);
         $scores[] = $quick !== null ? $scoring->scoreQuickfire($quick) : null;
 
         $pipeSeconds = $this->parseSeconds($this->pipeTime ?: $this->pipeTime2);
-        $pipeCompleted = $pipeSeconds !== null || ! empty($this->pipeTime) || ! empty($this->pipeTime2);
+        $pipeCompleted = $pipeSeconds !== null || $this->pipeTime !== '' && $this->pipeTime !== '0' || $this->pipeTime2 !== '' && $this->pipeTime2 !== '0';
         $scores[] = $pipeCompleted ? $scoring->scorePipeFit(true, $pipeSeconds) : null;
 
         $this->previewScores = $scores;
-        $this->totalPreview = (int) array_sum(array_filter($scores, fn ($s) => $s !== null));
+        $this->totalPreview = array_sum(array_filter($scores, fn (?int $s): bool => $s !== null));
     }
 
     public function save(): void
@@ -122,39 +126,39 @@ class ManualScoreEntry extends Component
 
         $attempts = [];
 
-        $hazardCorrect = $this->parseFraction($this->hazardMark, 5);
+        $hazardCorrect = $this->parseFraction($this->hazardMark);
         $hazardSeconds = $this->parseSeconds($this->hazardTime);
         if ($hazardCorrect !== null) {
             $result = $scoring->scoreHazard($hazardCorrect, $hazardSeconds);
             $attempts[] = ['game_code' => 'hazard_hunt_ride', 'raw_result' => $result['rawResult'], 'score' => $result['score'], 'breakdown' => $result['breakdown']];
         }
 
-        $hazardCorrect2 = $this->parseFraction($this->hazardMark2, 5);
+        $hazardCorrect2 = $this->parseFraction($this->hazardMark2);
         $hazardSeconds2 = $this->parseSeconds($this->hazardTime2);
         if ($hazardCorrect2 !== null) {
             $result = $scoring->scoreHazard($hazardCorrect2, $hazardSeconds2);
             $attempts[] = ['game_code' => 'hazard_hunt_ride', 'raw_result' => $result['rawResult'], 'score' => $result['score'], 'breakdown' => $result['breakdown']];
         }
 
-        $reaction = $this->parseFraction($this->reactionMark, 10);
+        $reaction = $this->parseFraction($this->reactionMark);
         if ($reaction !== null) {
             $score = $scoring->scoreReactionRisk($reaction);
             $attempts[] = ['game_code' => 'reaction_risk', 'raw_result' => "{$reaction}/10 sticks", 'score' => $score, 'breakdown' => []];
         }
 
-        $reaction2 = $this->parseFraction($this->reactionMark2, 10);
+        $reaction2 = $this->parseFraction($this->reactionMark2);
         if ($reaction2 !== null) {
             $score = $scoring->scoreReactionRisk($reaction2);
             $attempts[] = ['game_code' => 'reaction_risk', 'raw_result' => "{$reaction2}/10 sticks", 'score' => $score, 'breakdown' => []];
         }
 
-        $quick = $this->parseFraction($this->quickfireMark, 10);
+        $quick = $this->parseFraction($this->quickfireMark);
         if ($quick !== null) {
             $score = $scoring->scoreQuickfire($quick);
             $attempts[] = ['game_code' => 'quickfire_quiz', 'raw_result' => "{$quick}/10", 'score' => $score, 'breakdown' => []];
         }
 
-        $quick2 = $this->parseFraction($this->quickfireMark2, 10);
+        $quick2 = $this->parseFraction($this->quickfireMark2);
         if ($quick2 !== null) {
             $score = $scoring->scoreQuickfire($quick2);
             $attempts[] = ['game_code' => 'quickfire_quiz', 'raw_result' => "{$quick2}/10", 'score' => $score, 'breakdown' => []];
@@ -162,7 +166,7 @@ class ManualScoreEntry extends Component
 
         $pipeSeconds = $this->parseSeconds($this->pipeTime);
         $pipeFailed = $this->isPipeFitFail($this->pipeTime);
-        if (! $pipeFailed && ($pipeSeconds !== null || ! empty($this->pipeTime))) {
+        if (! $pipeFailed && ($pipeSeconds !== null || $this->pipeTime !== '' && $this->pipeTime !== '0')) {
             $completed = ! preg_match('/fail|incomplete|incorrect/i', $this->pipeTime);
             $score = $scoring->scorePipeFit($completed, $pipeSeconds);
             $rawResult = $completed ? 'pass + '.($pipeSeconds ?? '0').' sec' : 'fail';
@@ -171,7 +175,7 @@ class ManualScoreEntry extends Component
 
         $pipeSeconds2 = $this->parseSeconds($this->pipeTime2);
         $pipeFailed2 = $this->isPipeFitFail($this->pipeTime2);
-        if (! $pipeFailed2 && ($pipeSeconds2 !== null || ! empty($this->pipeTime2))) {
+        if (! $pipeFailed2 && ($pipeSeconds2 !== null || $this->pipeTime2 !== '' && $this->pipeTime2 !== '0')) {
             $completed2 = ! preg_match('/fail|incomplete|incorrect/i', $this->pipeTime2);
             $score = $scoring->scorePipeFit($completed2, $pipeSeconds2);
             $rawResult = $completed2 ? 'pass + '.($pipeSeconds2 ?? '0').' sec' : 'fail';
@@ -224,9 +228,9 @@ class ManualScoreEntry extends Component
         $this->showCelebration = false;
     }
 
-    private function parseFraction(?string $raw, int $fallbackMax): ?int
+    private function parseFraction(?string $raw): ?int
     {
-        if (empty($raw)) {
+        if (in_array($raw, [null, '', '0'], true)) {
             return null;
         }
         if (preg_match('/(\d{1,3})\s*\/\s*(\d{1,3})/', $raw, $m)) {
@@ -241,7 +245,7 @@ class ManualScoreEntry extends Component
 
     private function isPipeFitFail(?string $raw): bool
     {
-        if (empty($raw)) {
+        if (in_array($raw, [null, '', '0'], true)) {
             return false;
         }
 
@@ -250,7 +254,7 @@ class ManualScoreEntry extends Component
 
     private function parseSeconds(?string $raw): ?int
     {
-        if (empty($raw)) {
+        if (in_array($raw, [null, '', '0'], true)) {
             return null;
         }
         if (preg_match('/(\d{1,4})\s*(?:sec|second|seconds|s)\b/i', $raw, $m)) {
@@ -263,7 +267,7 @@ class ManualScoreEntry extends Component
         return null;
     }
 
-    public function render()
+    public function render(): View
     {
         return view('livewire.public.manual-score-entry')
             ->layout('components.layouts.app');

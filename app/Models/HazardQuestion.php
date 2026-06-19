@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 class HazardQuestion extends Model
 {
@@ -17,6 +20,7 @@ class HazardQuestion extends Model
         'explanation',
     ];
 
+    #[Override]
     protected function casts(): array
     {
         return [
