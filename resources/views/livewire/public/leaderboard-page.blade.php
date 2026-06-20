@@ -50,11 +50,11 @@
                     <div style="margin:0 0 16px;padding:16px;border:1px solid var(--line);border-radius:8px;background:#f4fbfa">
                         <p style="font-weight:800;margin:0 0 8px">Scan a scorecard photo to auto-fill</p>
                         <input type="file" wire:model.live="ocrImage" accept="image/*" capture="environment" id="ocr-file-input" style="display:none">
-                        <button type="button" class="primary-button compact-action" onclick="document.getElementById('ocr-file-input').click()" wire:loading.remove wire:target="ocrImage">
-                            <span wire:loading.remove wire:target="runOcr">Select & Extract from Photo</span>
+                        <button type="button" class="primary-button compact-action" onclick="document.getElementById('ocr-file-input').click()">
+                            Select & Extract from Photo
                         </button>
-                        <span wire:loading wire:target="ocrImage" style="color:var(--muted);font-weight:700">Uploading...</span>
-                        <span wire:loading wire:target="runOcr" style="color:var(--muted);font-weight:700">Processing with AI...</span>
+                        <span wire:loading wire:target="ocrImage" style="margin-left:8px;color:var(--muted);font-weight:700">Uploading...</span>
+                        <span wire:loading wire:target="runOcr" style="margin-left:8px;color:var(--muted);font-weight:700">Processing with AI...</span>
                         @if($ocrStatus)
                             <p style="margin-top:8px;color:var(--petronas-dark);font-weight:800;font-size:14px">{{ $ocrStatus }}</p>
                         @endif

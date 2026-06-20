@@ -14,6 +14,7 @@ use Illuminate\View\View;
 use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Files;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
 use function Laravel\Ai\agent;
@@ -41,7 +42,7 @@ class LeaderboardPage extends Component
 
     public string $pin = '';
 
-    /** @var \Livewire\Features\SupportFileUploads\TemporaryUploadedFile|null */
+    /** @var TemporaryUploadedFile|null */
     public $ocrImage = null;
 
     public string $ocrStatus = '';
@@ -199,6 +200,9 @@ class LeaderboardPage extends Component
         $path = $this->ocrImage->store('tmp');
 
         try {
+            $provider = config('ai.ocr.provider', 'openai');
+            $model = config('ai.ocr.model', 'gpt-4o');
+
             $response = agent(
                 instructions: (new ScorecardOcrAgent)->instructions(),
                 schema: fn (JsonSchema $schema) => (new ScorecardOcrAgent)->schema($schema),
@@ -207,12 +211,12 @@ class LeaderboardPage extends Component
                 attachments: [
                     Files\Image::fromStorage($path),
                 ],
-                provider: Lab::from(config('ai.ocr.provider')),
-                model: config('ai.ocr.model'),
+                provider: Lab::tryFrom($provider) ?? Lab::OpenAI,
+                model: $model,
             );
 
             foreach (['scorecardId', 'name', 'phone', 'email', 'hazardMark', 'hazardTime', 'hazardMark2', 'hazardTime2', 'reactionMark', 'reactionMark2', 'quickfireMark', 'quickfireMark2', 'pipeTime', 'pipeTime2'] as $field) {
-                if (isset($response[$field])) {
+                if (isset($response[$field]) && property_exists($this, $field)) {
                     $this->{$field} = $response[$field];
                 }
             }
@@ -222,7 +226,9 @@ class LeaderboardPage extends Component
         } catch (Exception $e) {
             $this->ocrStatus = 'Failed to process image: '.$e->getMessage();
         } finally {
-            Storage::disk('local')->delete($path);
+            if (Storage::disk('local')->exists($path)) {
+                Storage::disk('local')->delete($path);
+            }
         }
     }
 
