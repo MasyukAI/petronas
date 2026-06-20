@@ -49,9 +49,9 @@
 
                     <div style="margin:0 0 16px;padding:16px;border:1px solid var(--line);border-radius:8px;background:#f4fbfa">
                         <p style="font-weight:800;margin:0 0 8px">Scan a scorecard photo to auto-fill</p>
-                        <input type="file" wire:model.live="ocrImage" accept="image/*" capture="environment" id="ocr-file-input" style="display:none">
+                        <input type="file" wire:model.live="ocrImage" accept="image/*" id="ocr-file-input" style="display:none">
                         <button type="button" class="primary-button compact-action" onclick="document.getElementById('ocr-file-input').click()">
-                            Select & Extract from Photo
+                            Upload from Gallery or Camera
                         </button>
                         <span wire:loading wire:target="ocrImage" style="margin-left:8px;color:var(--muted);font-weight:700">Uploading...</span>
                         <span wire:loading wire:target="runOcr" style="margin-left:8px;color:var(--muted);font-weight:700">Processing with AI...</span>
