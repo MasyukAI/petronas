@@ -2,16 +2,26 @@
 
 namespace App\Http\Livewire\Public;
 
+use App\Ai\Agents\ScorecardOcrAgent;
 use App\Models\Participant;
 use App\Models\ScoreAttempt;
 use App\Services\ScoringService;
 use Exception;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Laravel\Ai\Enums\Lab;
+use Laravel\Ai\Files;
 use Livewire\Component;
+use Livewire\WithFileUploads;
+
+use function Laravel\Ai\agent;
 
 class LeaderboardPage extends Component
 {
+    use WithFileUploads;
+
     /** @var array<int, array<string, mixed>> */
     public array $entries = [];
 
@@ -30,6 +40,11 @@ class LeaderboardPage extends Component
     public string $email = '';
 
     public string $pin = '';
+
+    /** @var \Livewire\Features\SupportFileUploads\TemporaryUploadedFile|null */
+    public $ocrImage = null;
+
+    public string $ocrStatus = '';
 
     public string $hazardMark = '';
 
@@ -164,6 +179,51 @@ class LeaderboardPage extends Component
 
         $this->previewScores = $scores;
         $this->totalPreview = array_sum(array_filter($scores, fn (?int $s): bool => $s !== null));
+    }
+
+    public function updatedOcrImage(): void
+    {
+        $this->runOcr();
+    }
+
+    public function runOcr(): void
+    {
+        if (! $this->ocrImage) {
+            $this->ocrStatus = 'Please select an image first.';
+
+            return;
+        }
+
+        $this->ocrStatus = 'Processing image...';
+
+        $path = $this->ocrImage->store('tmp');
+
+        try {
+            $response = agent(
+                instructions: (new ScorecardOcrAgent)->instructions(),
+                schema: fn (JsonSchema $schema) => (new ScorecardOcrAgent)->schema($schema),
+            )->prompt(
+                'Extract all visible scorecard data from this photograph.',
+                attachments: [
+                    Files\Image::fromStorage($path),
+                ],
+                provider: Lab::from(config('ai.ocr.provider')),
+                model: config('ai.ocr.model'),
+            );
+
+            foreach (['scorecardId', 'name', 'phone', 'email', 'hazardMark', 'hazardTime', 'hazardMark2', 'hazardTime2', 'reactionMark', 'reactionMark2', 'quickfireMark', 'quickfireMark2', 'pipeTime', 'pipeTime2'] as $field) {
+                if (isset($response[$field])) {
+                    $this->{$field} = $response[$field];
+                }
+            }
+
+            $this->ocrStatus = 'Scorecard data extracted successfully. Review and save.';
+            $this->calculatePreview();
+        } catch (Exception $e) {
+            $this->ocrStatus = 'Failed to process image: '.$e->getMessage();
+        } finally {
+            Storage::disk('local')->delete($path);
+        }
     }
 
     public function save(): void
